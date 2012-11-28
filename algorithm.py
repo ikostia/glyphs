@@ -1,145 +1,9 @@
-#! /usr/bin/python
 """
 Authors: Nastia Merlits, Kostia Balitsky
 """
 
-import structures
-
-
-class Segment(object):
-    """Represent one-dimentional segment"""
-
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
-
-    def __contains__(self, point):
-        """Check whether point lays inside of a segment"""
-        if self.start <= point <= self.end:
-            return True
-        return False
-
-    def __gt__(self, point):
-        """Check whether segment lays to the right of a point"""
-        if self.start > point:
-            return True
-        return False
-
-    def __lt__(self, point):
-        """Check whether segment lays to the left of a point"""
-        if self.end < point:
-            return True
-        return False
-
-    def __len__(self):
-        return self.end - self.start + 1
-
-    def adjacent(self, other):
-        """Check whether segment is adjacent to
-        another segment or a point.
-        """
-        if isinstance(other, Segment):
-            return self.start - 1 == other.end or self.end + 1 == other.start
-        return other == self.start - 1 or other == self.end + 1
-
-    def extend(self, point):
-        """Extend segment to the left ot to the right with given point"""
-        if point == self.start - 1:
-            self.start = point
-        elif point == self.end + 1:
-            self.end = point
-
-
-class SegmentSequence(object):
-    """
-    Represent ordered set of one-dimentional disjoint non-adjacent segments.
-
-    This data structure maintains a set of 1D segmens and allows
-    one to add an arbitrary point to this set. If the added point lays
-    inside of one of the segments, the set remains unchanged. If the point
-    is adjacent to one of the segments, the segment extends to include the
-    point. Finally, if the point is not adjacent to any segment, the new
-    segment containing this point only is created in appropriate place.
-
-    Thus the set of segments is always ordered. Moreover, no two neighbour
-    segments are adjacent on a line: if one ends in x, the next one starts
-    no earlier than x+2.
-    """
-
-    def __init__(self, satellite=None):
-        self.satellite = satellite
-        self.segments = []
-
-    def _try_to_add_external(self, point):
-        """
-        Try to add a point if it is not in the boundaries of a current
-        segment set.
-        """
-        if not self.segments:
-            self.segments = [Segment(point, point)]
-            return True
-        if self.segments and self.segments[-1] < point:
-            if self.segments[-1].adjacent(point):
-                self.segments[-1].extend(point)
-            else:
-                self.segments += [Segment(point, point)]
-            return True
-        if self.segments and self.segments[0] > point:
-            if self.segments[0].adjacent(point):
-                self.segments[0].extend(point)
-            else:
-                self.segments = [Segment(point, point)] + self.segments
-            return True
-        return False
-
-    def add_point(self, point):
-        """Add a new point to the set of segments."""
-        if self._try_to_add_external(point):
-            return
-
-        left = 0
-        right = len(self.segments) - 1
-        while right - left > 1:
-            mid = (left + right) / 2
-            if point in self.segments[mid]:
-                left = right = mid
-                break
-            elif self.segments[mid] > point:
-                right = mid
-            else:
-                left = mid
-
-        if left < right:
-            self.segments = (self.segments[:left + 1] +
-                        [Segment(point, point)] + self.segments[right:])
-            self._try_to_merge(left, left + 1)
-            self._try_to_merge(left, left + 1)
-            self._try_to_merge(right, right + 1)
-
-    def __repr__(self):
-        return "<SegSeq: %r, %r>" %\
-            ([(seg.start, seg.end) for seg in self.segments], self.satellite)
-
-    def __iter__(self):
-        return iter(self.segments)
-
-    def _try_to_merge(self, ind1, ind2):
-        """
-        Try to merge segments with indices ``ind1`` and ``ind2``
-        into one and return True. Otherwise, return False.
-        """
-        if ind2 < len(self.segments) and\
-                        self.segments[ind1].adjacent(self.segments[ind2]):
-            self._merge(ind1, ind2)
-            return True
-        return False
-
-    def _merge(self, ind1, ind2):
-        """Merge segments with indices ``ind1`` and ``ind2``."""
-        self.segments = (self.segments[:ind1] +
-                        [Segment(self.segments[ind1].start,
-                                 self.segments[ind2].end)] +
-                        self.segments[ind2 + 1:])
+from settings import HORIZONTAL, VERTICAL, EPS
+from structures import SegmentSequence, Glyph, Line, Point, Circle
 
 
 class Converter(object):
@@ -147,7 +11,7 @@ class Converter(object):
         pass
 
     def run(self, glyph):
-        if glyph.orientation == structures.HORIZONTAL:
+        if glyph.orientation == HORIZONTAL:
             level_coord = 1
         else:
             level_coord = 0
@@ -161,10 +25,10 @@ class Converter(object):
                 seqs[point] = seq
 
         level_coord, dim_coord = dim_coord, level_coord
-        result = structures.Glyph(orientation=not glyph.orientation)
+        result = Glyph(orientation=not glyph.orientation)
         for level, sequence in seqs.items():
             for segment in sequence:
-                line = structures.Line(l=len(segment))
+                line = Line(l=len(segment))
                 line[level_coord] = level
                 line[dim_coord] = segment.start
                 result.add_line(line)
@@ -172,17 +36,133 @@ class Converter(object):
         return result
 
 
-if __name__ == "__main__":
-    ss = SegmentSequence(satellite='cool')
-    ss.add_point(1)
-    ss.add_point(2)
-    ss.add_point(4)
-    print ss
-    ss.add_point(3)
-    ss.add_point(2)
+class ConvexHull(object):
+    def __init__(self, points):
+        points.sort(key=lambda p: p.x)
+        self.pivot, points = points[0], points[1:]
+        points.sort(lambda p1, p2: self.angle_cmp(p1, p2))
+        
+        if len(points) < 2:
+            self.hull = [pivot] + points
+            return
 
-    ss.add_point(7)
-    ss.add_point(6)
-    ss.add_point(9)
-    ss.add_point(8)
-    print ss
+        hull = [self.pivot, points[0], points[1]]
+        for i in xrange(2, len(points)):
+            while len(hull) >= 2 and self.counterclockwise(hull[-2], hull[-1], points[i]) <= 0:
+                hull.pop()
+            hull.append(points[i])
+
+        self.points = hull
+
+    def sign(self, x):
+        return 1 if x > 0 else 0 if x == 0 else -1
+
+    def angle_cmp(self, p1, p2):
+        return -self.sign(self.counterclockwise(self.pivot, p1, p2))
+
+    def cross(self, v1, v2):
+        return v1.x * v2.y - v1.y * v2.x
+
+    def counterclockwise(self, p1, p2, p3):
+        """
+        Check whether a turn from (p1, p2) to (p1, p3) is counter clockwise.
+
+        If it is so, the return value is > 0, if the turn is clockwise, the 
+        return value is < 0. If vectors are collinear, the return value is 0.
+        """
+        return self.cross(Point(p2.x - p1.x, p2.y - p1.y), Point(p3.x - p1.x, p3.y - p1.y))
+
+
+class NaiveEnclosingCircle(object):
+    def __init__(self, points):
+        if len(points) == 1:
+            self.circle = Circle(points[0].x, points[0].y, 0)
+            return
+        
+        if len(points) == 2:
+            self.circle = self.circle_on_diameter(points[0], points[1])
+            return
+
+        j1, j2 = 0, 1
+        for i1 in xrange(len(points)):
+            for i2 in xrange(i1 + 1, len(points)):
+                if self.distance(points[i1], points[i2]) >\
+                                self.distance(points[j1], points[j2]):
+                    j1, j2 = i1, i2
+
+        circle_ = self.circle_on_diameter(points[j1], points[j2])
+        radius_threshold = circle_.r
+        if self.is_enclosing(circle_, points):
+            print 'Final circle is based on: ', points[j1], points[j2]
+            self.circle = circle_
+            return
+
+        circle = None
+        for i1 in xrange(len(points)):
+            for i2 in xrange(i1 + 1, len(points)):
+                for i3 in xrange(i2 + 1, len(points)):
+                    circle_ = self.circle_on_triangle(points[i1],
+                                                      points[i2],
+                                                      points[i3])
+                    if circle_.r - radius_threshold > -EPS  and\
+                                (not circle or circle.r - circle_.r > -EPS) and\
+                                self.is_enclosing(circle_, points):
+                        circle = circle_
+        self.circle = circle
+
+        if self.circle is None:
+            raise Exception('No idea how, but we did not find an enclosing circle.')
+
+    def distance(self, p1, p2):
+        return ((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2) ** 0.5
+
+    def middle(self, *points):
+        x, y = 0, 0
+        for point in points:
+            x, y = x + point.x, y + point.y
+        x, y = x * 1. / len(points), y * 1. / len(points)
+        return Point(x, y)
+
+    def circle_on_diameter(self, p1, p2):
+        center = self.middle(p1, p2)
+        rad = self.distance(p1, p2) / 2.
+        return Circle(center.x, center.y, rad)
+
+    def circle_on_triangle(self, p1, p2, p3):
+        a = self.distance(p1, p2)
+        b = self.distance(p1, p3)
+        c = self.distance(p2, p3)
+        p = (a + b + c) / 2.
+        s = (p * (p - a) * (p - b) * (p - c)) ** 0.5
+        rad = a*b*c / 4. / s
+
+        alpha_a = a * a / 8. / s / s * ((p1 - p3) * (p2 - p3))
+        alpha_b = b * b / 8. / s / s * ((p1 - p2) * (p3 - p2))
+        alpha_c = c * c / 8. / s / s * ((p2 - p1) * (p3 - p1))
+
+        center = p3 * alpha_a + p2 * alpha_b + p1 * alpha_c
+
+        return Circle(center.x, center.y, rad)
+
+    def is_enclosing(self, circle, points):
+        return all([point in circle for point in points])
+
+
+if __name__ == "__main__":
+    points = [Point(0, 1), Point(0, 0), Point(1, 1), Point(1, 0), Point(.5, .5),
+              Point(.7, .7), Point(.5, 1), Point(1, .5), Point(.5, -1)]
+    ch = ConvexHull(points)
+    print ch.points
+
+    ec = NaiveEnclosingCircle(ch.points)
+    print ec.circle
+
+    from math import pi, sin, cos
+    cos45 = cos(pi / 4)
+    cos60 = cos(pi / 3)
+    sin60 = sin(pi / 3)
+    points = [Point(0., 1.), Point(1., 0.),
+              Point(1. + cos45, 1 + cos45),
+              Point(1. + sin60, 1. - cos60)]
+    ec = NaiveEnclosingCircle(points)
+    print ec.circle
