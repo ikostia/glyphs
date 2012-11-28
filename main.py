@@ -1,4 +1,7 @@
 #! /usr/bin/python
+"""
+Authors: Nastia Merlits, Kostia Balitsky
+"""
 
 import sys
 import reader

@@ -1,3 +1,7 @@
+"""
+Authors: Nastia Merlits, Kostia Balitsky
+"""
+
 HORIZONTAL = False
 VERTICAL = True
 

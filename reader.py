@@ -1,3 +1,7 @@
+"""
+Authors: Nastia Merlits, Kostia Balitsky
+"""
+
 import itertools
 import structures
 

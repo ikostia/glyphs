@@ -172,25 +172,6 @@ class Converter(object):
         return result
 
 
-class Point(object):
-    def __init__(self, x, y):
-        self.x, self.y = x, y
-
-class ConvexHull(object):
-    """
-    Graham's scan
-
-    We prefer Graham's scan over Jarvis' march
-    because we know nothing about point number in
-    a final hull wehreas the initial set of points
-    is likely to be partially sorted.
-    """
-
-    def __init__(self, point_set):
-        self.point_set = point_set
-        return NotImplemented
-
-
 if __name__ == "__main__":
     ss = SegmentSequence(satellite='cool')
     ss.add_point(1)
