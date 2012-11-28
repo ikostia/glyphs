@@ -86,21 +86,15 @@ class Segment(object):
 
     def __contains__(self, point):
         """Check whether point lays inside of a segment"""
-        if self.start <= point <= self.end:
-            return True
-        return False
+        return self.start <= point <= self.end
 
     def __gt__(self, point):
         """Check whether segment lays to the right of a point"""
-        if self.start > point:
-            return True
-        return False
+        return self.start > point
 
     def __lt__(self, point):
         """Check whether segment lays to the left of a point"""
-        if self.end < point:
-            return True
-        return False
+        return self.end < point
 
     def __len__(self):
         return self.end - self.start + 1
@@ -114,7 +108,7 @@ class Segment(object):
         return other == self.start - 1 or other == self.end + 1
 
     def extend(self, point):
-        """Extend segment to the left ot to the right with given point"""
+        """Extend segment to the left or to the right with given point"""
         if point == self.start - 1:
             self.start = point
         elif point == self.end + 1:
@@ -149,13 +143,13 @@ class SegmentSequence(object):
         if not self.segments:
             self.segments = [Segment(point, point)]
             return True
-        if self.segments and self.segments[-1] < point:
+        if self.segments[-1] < point:
             if self.segments[-1].adjacent(point):
                 self.segments[-1].extend(point)
             else:
                 self.segments += [Segment(point, point)]
             return True
-        if self.segments and self.segments[0] > point:
+        if self.segments[0] > point:
             if self.segments[0].adjacent(point):
                 self.segments[0].extend(point)
             else:
