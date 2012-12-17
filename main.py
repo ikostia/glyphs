@@ -6,7 +6,8 @@ import sys
 
 import reader
 from structures import VERTICAL, HORIZONTAL, Point, Glyph, Circle
-from algorithm import Converter, ConvexHull, NaiveEnclosingCircle
+from algorithm import (Converter, ConvexHull, NaiveEnclosingCircle,
+                        LinearEnclosingCircle)
 from gelements import GDrawing, GZone, GLine, GPoint, GCircle
 from drawer import run_gui
 import settings
@@ -61,15 +62,7 @@ class ConvexHullAdapter(object):
 
 if __name__ == "__main__":
     glyph = reader.from_tripples(sys.stdin.read(), HORIZONTAL)
-    converted = Converter().run(glyph)
-    hull = ConvexHullAdapter(glyph).points
-    circle = NaiveEnclosingCircle(hull).circle
-
     adapter = DrawingAdapter()
-    adapter.add_zone(glyph)
-    adapter.add_zone(converted)
-    adapter.add_zone(hull)
-    adapter.add_zone(glyph, circle)
 
     print '-'*50 + '\n'
     
@@ -77,15 +70,31 @@ if __name__ == "__main__":
     print glyph
     print [(line.x, line.y, line.l) for line in glyph.lines]
     print '-'*50 + '\n'
+    adapter.add_zone(glyph)
 
+    converted = Converter().run(glyph)
     print 'Converted glyph:'
     print converted
     print [(line.x, line.y, line.l) for line in converted.lines]
     print '-'*50 + '\n'
+    adapter.add_zone(converted)
 
-    print 'Enclosing circle:'
+    hull = ConvexHullAdapter(glyph).points
+    print 'Convex hull:'
+    print hull
+    print '-'*50 + '\n'
+    adapter.add_zone(hull)
+
+    circle = NaiveEnclosingCircle(hull).circle
+    print 'Enclosing circle (by naive algorithm):'
     print circle
     print '-'*50 + '\n'
+    adapter.add_zone(glyph, circle)
 
+    # lcircle = LinearEnclosingCircle(hull[2:6]).circle
+    # print 'Enclosing circle (by linear algoritm):'
+    # print lcircle
+    # print '-'*50 + '\n'
+    # adapter.add_zone(glyph, lcircle)
 
     run_gui(adapter.drawing)

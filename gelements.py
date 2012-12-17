@@ -9,7 +9,7 @@ from OpenGL.GLU import *
 from math import pi, cos, sin
 import structures
 from settings import (BORDER_COLOR, FILL_COLOR, HORIZONTAL, VERTICAL,
-                        XOFFSET, YOFFSET)
+                        XOFFSET, YOFFSET, SCALE)
 
 class GElement(object):
     def draw(self, x, y, scale):
@@ -105,11 +105,11 @@ class GCircle(GElement):
 
     @property
     def max_x(self):
-        return self.x + self.r - 1
+        return max(self.x + self.r - 1, 2 * self.r)
 
     @property
     def max_y(self):
-        return self.y + self.r - 1
+        return max(self.y + self.r - 1, 2 * self.r)
 
     def draw(self, x, y, scale):
         cx, cy = x + self.x * scale + scale/2, y + self.y * scale + scale/2
